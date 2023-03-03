@@ -8,6 +8,7 @@ import (
     "strings"
     "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
     msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
+    msgraphcore "github.com/microsoftgraph/msgraph-sdk-go-core"
     "github.com/microsoftgraph/msgraph-sdk-go/models"
 )
 
@@ -38,17 +39,20 @@ func main() {
     graphId := "00000003-0000-0000-c000-000000000000"
     client , err  := msgraphsdk.NewGraphServiceClientWithCredentials(cred, []string{fmt.Sprintf("%s/.default", graphId)})
     check(err)
-
-    result, err := client.GroupsById(groupId).TransitiveMembers().Get(context.Background(), nil)
+    result, err := client.GroupsById(groupId).TransitiveMembers().User().Get(context.Background(), nil)
     check(err)
-    var users []string
 
-    val := result.GetValue()
-    for _, v := range val {
-        user, ok := v.(models.Userable)
-        if ok {
-            users = append(users, *user.GetUserPrincipalName())
-        }
-    }
+    var users []string
+    pageIterator, err := msgraphcore.NewPageIterator(
+        result, client.GetAdapter(), models.CreateUserCollectionResponseFromDiscriminatorValue)
+    check(err)
+
+    iterateErr := pageIterator.Iterate(context.Background(), func(pageItem interface{}) bool {
+        user := pageItem.(models.Userable)
+        users = append(users, *user.GetUserPrincipalName())
+        return true
+    })
+
+    check(iterateErr)
     fmt.Printf("{\"value\":\"%s\"}",strings.Join(users, ","))
 }
