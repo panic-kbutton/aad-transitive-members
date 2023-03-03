@@ -10,6 +10,7 @@ import (
     msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
     msgraphcore "github.com/microsoftgraph/msgraph-sdk-go-core"
     "github.com/microsoftgraph/msgraph-sdk-go/models"
+
 )
 
 func check(err error) {
@@ -47,12 +48,12 @@ func main() {
         result, client.GetAdapter(), models.CreateUserCollectionResponseFromDiscriminatorValue)
     check(err)
 
-    iterateErr := pageIterator.Iterate(context.Background(), func(pageItem interface{}) bool {
-        user := pageItem.(models.Userable)
-        users = append(users, *user.GetUserPrincipalName())
+    _ = pageIterator.Iterate(context.Background(), func(pageItem interface{}) bool {
+        user, ok := pageItem.(models.Userable)
+        if ok {
+            users = append(users, *user.GetUserPrincipalName())
+        }
         return true
     })
-
-    check(iterateErr)
     fmt.Printf("{\"value\":\"%s\"}",strings.Join(users, ","))
 }
